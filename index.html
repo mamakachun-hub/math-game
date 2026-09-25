@@ -1,0 +1,1617 @@
+﻿<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>保良局田家炳小學 - 小三時間應用題大冒險</title>
+  
+  <!-- Netlify & Web App Metadata -->
+  <meta name="description" content="保良局田家炳小學 - 三年級數學科時間應用題互動學習大冒險平台">
+  <meta name="theme-color" content="#1e3a8a">
+  <meta property="og:title" content="保良局田家炳小學 - 小三時間應用題大冒險">
+  <meta property="og:description" content="互動式時間應用題學習遊戲，支援撥動時鐘、數字鐘、自由探索與證書下載功能。">
+  <meta property="og:type" content="website">
+  
+  <!-- SVG Favicon to avoid 404 in Netlify logs -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>">
+
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts for Chinese Aesthetics -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
+
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              navy: '#1e3a8a',
+            }
+          },
+          fontFamily: {
+            sans: ['Noto Sans TC', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+
+  <style>
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+
+    /* Selection border style for mode buttons */
+    .active-mode-btn {
+      border-color: #2563eb !important;
+      background-color: #eff6ff !important;
+      color: #1e40af !important;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3) !important;
+      transform: scale(1.02);
+    }
+    
+    .hand {
+      transform-origin: bottom center;
+      transition: transform 0.05s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+    }
+    
+    .hand-interactive {
+      cursor: grab;
+    }
+    .hand-interactive:active {
+      cursor: grabbing;
+    }
+
+
+    @keyframes pulse-red {
+      0%, 100% { background-color: #fee2e2; color: #dc2626; border-color: #ef4444; }
+      50% { background-color: #ef4444; color: #ffffff; border-color: #991b1b; }
+    }
+
+
+    .timer-alert {
+      animation: pulse-red 0.8s infinite;
+    }
+
+
+    .digital-lcd {
+      font-family: 'Courier New', Courier, monospace;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+    }
+
+
+    .modal-enter {
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.85); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 h-[100dvh] text-slate-800 flex flex-col overflow-hidden">
+
+
+  <!-- Header Bar -->
+  <header class="bg-gradient-to-r from-blue-900 via-indigo-800 to-sky-800 text-white shadow-lg shrink-0 z-30">
+    <div class="max-w-5xl mx-auto px-4 py-2 sm:py-2.5 flex flex-wrap justify-between items-center gap-2">
+      <div class="flex items-center space-x-3">
+        <div class="bg-white text-blue-900 p-2 rounded-full font-black text-xl w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shadow">
+          🏫
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-lg font-bold tracking-wide leading-tight">保良局田家炳小學</h1>
+          <p class="text-[10px] sm:text-xs text-sky-200">三年級數學科：時間應用題大冒險</p>
+        </div>
+      </div>
+
+
+      <!-- Live Info Badge (When In Game) -->
+      <div id="headerStats" class="hidden flex items-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-md px-3 py-1 rounded-xl border border-white/20 text-xs sm:text-sm">
+        <div class="flex items-center gap-1.5">
+          <i class="fa-solid fa-trophy text-yellow-300"></i>
+          <span>題數: <strong id="progressText" class="text-yellow-300">1/5</strong></span>
+        </div>
+        <div id="timerContainer" class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/20 font-bold transition-all">
+          <i class="fa-regular fa-clock"></i>
+          <span id="timerText">120秒</span>
+        </div>
+        <button onclick="quitGame()" class="ml-1 bg-red-500 hover:bg-red-600 text-white px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow active:scale-95">
+          <i class="fa-solid fa-right-from-bracket"></i> 退出
+        </button>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- Main View Container -->
+  <main class="flex-grow max-w-4xl w-full mx-auto p-2 sm:p-3 flex flex-col justify-center overflow-y-auto">
+
+
+    <!-- SCREEN 1: Setup & Mode Selection -->
+    <section id="setupScreen" class="bg-white rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-200 max-w-xl mx-auto w-full transition-all my-auto space-y-4">
+      <div class="text-center">
+        <div class="inline-block p-3 rounded-full bg-blue-50 text-blue-600 mb-1 shadow-inner">
+          <i class="fa-solid fa-clock-rotate-left text-3xl"></i>
+        </div>
+        <h2 class="text-xl sm:text-2xl font-black text-slate-800">歡迎來到時間探險樂園！</h2>
+        <p class="text-xs text-slate-500 mt-0.5">請輸入你的姓名並選擇遊戲模式開始挑戰</p>
+      </div>
+
+
+      <div class="space-y-4">
+        <!-- Student Name Input -->
+        <div>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 mb-1">
+            <i class="fa-solid fa-user-graduate text-blue-600 mr-1"></i> 學生姓名：
+          </label>
+          <input type="text" id="studentNameInput" value="玩家1" placeholder="請輸入名字" 
+                 class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:outline-none text-sm font-semibold text-slate-800 shadow-sm transition">
+        </div>
+
+
+        <!-- Mode Selection Step 1 -->
+        <div>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+            <i class="fa-solid fa-gamepad text-indigo-600 mr-1"></i> 步驟 1：選擇顯示機制
+          </label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" onclick="selectDisplayMode('analog')" id="btnDisplayAnalog" 
+                    class="mode-btn active-mode-btn border-2 border-slate-200 bg-slate-50 text-slate-700 rounded-2xl p-2.5 flex flex-col items-center justify-center space-y-1 transition shadow-sm text-center">
+              <i class="fa-solid fa-clock text-xl"></i>
+              <span class="font-bold text-xs sm:text-sm">時鐘模式</span>
+              <span class="text-[10px] opacity-75">轉動分針</span>
+            </button>
+
+
+            <button type="button" onclick="selectDisplayMode('digital')" id="btnDisplayDigital" 
+                    class="mode-btn border-2 border-slate-200 bg-slate-50 text-slate-700 rounded-2xl p-2.5 flex flex-col items-center justify-center space-y-1 transition shadow-sm text-center">
+              <i class="fa-solid fa-stopwatch text-xl"></i>
+              <span class="font-bold text-xs sm:text-sm">數字鐘模式</span>
+              <span class="text-[10px] opacity-75">數字鍵盤</span>
+            </button>
+
+
+            <button type="button" onclick="selectDisplayMode('free')" id="btnDisplayFree" 
+                    class="mode-btn border-2 border-slate-200 bg-slate-50 text-slate-700 rounded-2xl p-2.5 flex flex-col items-center justify-center space-y-1 transition shadow-sm text-center">
+              <i class="fa-solid fa-compass text-xl"></i>
+              <span class="font-bold text-xs sm:text-sm">自由轉動</span>
+              <span class="text-[10px] opacity-75">探索時間</span>
+            </button>
+          </div>
+        </div>
+
+
+        <!-- Mode Selection Step 2 (For Challenge Modes) -->
+        <div id="targetTypeContainer">
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+            <i class="fa-solid fa-bullseye text-emerald-600 mr-1"></i> 步驟 2：選擇提問目標
+          </label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button type="button" onclick="selectTargetMode('end')" id="btnTargetEnd" 
+                    class="target-btn active-mode-btn border-2 border-slate-200 bg-slate-50 text-slate-700 rounded-xl py-2 px-2 text-xs font-bold text-center transition">
+              問「結束時間」
+            </button>
+            <button type="button" onclick="selectTargetMode('start')" id="btnTargetStart" 
+                    class="target-btn border-2 border-slate-200 bg-slate-50 text-slate-700 rounded-xl py-2 px-2 text-xs font-bold text-center transition">
+              問「開始時間」
+            </button>
+            <button type="button" onclick="selectTargetMode('elapsed')" id="btnTargetElapsed" 
+                    class="target-btn border-2 border-slate-200 bg-slate-50 text-slate-700 rounded-xl py-2 px-2 text-xs font-bold text-center transition">
+              問「經過時間」
+            </button>
+            <button type="button" onclick="selectTargetMode('mixed')" id="btnTargetMixed" 
+                    class="target-btn border-2 border-slate-200 bg-slate-50 text-slate-700 rounded-xl py-2 px-2 text-xs font-bold text-center transition">
+              🎲 隨機綜合
+            </button>
+          </div>
+        </div>
+
+
+        <!-- Start Game Button -->
+        <button onclick="startGame()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-base sm:text-lg py-3 sm:py-3.5 rounded-2xl shadow-lg transform active:scale-95 transition flex items-center justify-center space-x-2">
+          <span>開始時間挑戰之旅</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- SCREEN 2: Gameplay Area (Challenge Modes) -->
+    <section id="gameplayScreen" class="hidden flex flex-col h-full justify-between gap-2">
+      <!-- Question Banner & Scenario Card -->
+      <div class="bg-white rounded-2xl p-3 shadow-md border border-slate-200 flex flex-row items-center gap-3 shrink-0">
+        <!-- SVG Scenario Art Visualizer -->
+        <div id="scenarioArt" class="w-20 h-16 sm:w-28 sm:h-20 bg-gradient-to-br from-sky-100 to-indigo-100 rounded-xl flex items-center justify-center p-1.5 shadow-inner border border-sky-200 shrink-0">
+          <!-- Dynamic SVG inserted by JS -->
+        </div>
+
+
+        <!-- Question Description & Clues -->
+        <div class="flex-1 space-y-1.5 overflow-hidden">
+          <div class="flex items-center gap-2">
+            <span class="bg-indigo-100 text-indigo-800 font-bold text-[10px] sm:text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+              <i class="fa-solid fa-book-open"></i> 情境應用題
+            </span>
+            <span id="targetBadge" class="bg-amber-100 text-amber-800 font-bold text-[10px] sm:text-xs px-2 py-0.5 rounded-full">
+              求結束時間
+            </span>
+          </div>
+
+
+          <p id="questionText" class="text-xs sm:text-sm font-bold text-slate-800 leading-tight">
+            載入題目中...
+          </p>
+
+
+          <!-- Known Conditions Grid -->
+          <div class="grid grid-cols-3 gap-1 text-center text-[10px] sm:text-xs">
+            <div id="clueStartBox" class="bg-blue-50 border border-blue-200 p-1 rounded-lg">
+              <div class="text-slate-500 font-medium truncate">開始時間</div>
+              <div id="clueStartVal" class="font-black text-blue-700 text-xs mt-0.5">--</div>
+            </div>
+            <div id="clueElapsedBox" class="bg-amber-50 border border-amber-200 p-1 rounded-lg">
+              <div class="text-slate-500 font-medium truncate">經過時間</div>
+              <div id="clueElapsedVal" class="font-black text-amber-700 text-xs mt-0.5">--</div>
+            </div>
+            <div id="clueEndBox" class="bg-emerald-50 border border-emerald-200 p-1 rounded-lg">
+              <div class="text-slate-500 font-medium truncate">結束時間</div>
+              <div id="clueEndVal" class="font-black text-emerald-700 text-xs mt-0.5">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Interactive Answer Area -->
+      <div class="bg-white rounded-2xl p-2.5 sm:p-4 shadow-md border border-slate-200 flex-1 flex flex-col items-center justify-between min-h-0 overflow-y-auto">
+        <h3 id="answerInstructionBox" class="text-xs sm:text-sm font-bold text-slate-700 flex items-center gap-1.5 shrink-0 mb-1">
+          <i class="fa-solid fa-hand-pointer text-indigo-500"></i>
+          <span id="answerInstruction">請撥動時鐘分針或選擇時間回答：</span>
+        </h3>
+
+
+        <!-- ANALOG CLOCK INTERFACE -->
+        <div id="analogClockArea" class="flex flex-col items-center justify-center w-full my-auto">
+          <div class="relative w-40 h-40 sm:w-48 sm:h-48 my-1">
+            <svg id="clockSvg" class="w-full h-full clock-face bg-white rounded-full border-[5px] border-slate-800 shadow-md" viewBox="0 0 300 300">
+              <circle cx="150" cy="150" r="142" fill="none" stroke="#e2e8f0" stroke-width="4"/>
+              <g id="clockTicks" stroke="#64748b" stroke-linecap="round"></g>
+              <g id="clockNumbers" font-family="Noto Sans TC" font-weight="bold" font-size="20" fill="#1e293b" text-anchor="middle" dominant-baseline="central"></g>
+              <!-- Hour Hand (Non-interactive) -->
+              <line id="hourHand" x1="150" y1="150" x2="150" y2="85" stroke="#1e293b" stroke-width="8" stroke-linecap="round"/>
+              <!-- Minute Hand (Interactive Drag) -->
+              <line id="minuteHand" class="hand-interactive" x1="150" y1="150" x2="150" y2="45" stroke="#ef4444" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="150" cy="150" r="8" fill="#1e293b"/>
+              <circle cx="150" cy="150" r="3" fill="#ffffff"/>
+            </svg>
+          </div>
+
+
+          <!-- AM / PM Selector & Live Display -->
+          <div class="flex items-center gap-2 mt-2">
+            <div id="amPmToggleGroup" class="flex bg-slate-100 p-1 rounded-xl border border-slate-300">
+              <button type="button" id="btnAM" onclick="setAmPm('AM')" class="px-3 py-1 rounded-lg font-bold text-xs bg-white text-blue-700 shadow">上午</button>
+              <button type="button" id="btnPM" onclick="setAmPm('PM')" class="px-3 py-1 rounded-lg font-bold text-xs text-slate-600">下午</button>
+            </div>
+            <div class="bg-slate-900 text-green-400 px-3 py-1.5 rounded-xl digital-lcd font-bold text-sm sm:text-base border border-slate-700 shadow-inner">
+              <span id="analogLiveReading">08:00 上午</span>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- DIGITAL CLOCK & KEYPAD INTERFACE -->
+        <div id="digitalClockArea" class="hidden flex flex-col items-center justify-center w-full max-w-xs my-auto">
+          <div class="bg-slate-900 border-4 border-slate-700 rounded-2xl p-2 w-full text-center shadow-inner mb-2">
+            <div class="text-[10px] text-slate-400 mb-0.5 tracking-widest uppercase">12-HOUR CLOCK</div>
+            <div id="digitalDisplayBox" class="digital-lcd text-2xl text-emerald-400 font-bold tracking-wider py-0.5">
+              08 : 00 AM
+            </div>
+          </div>
+
+
+          <div id="digitalTimeInputs" class="w-full space-y-1.5">
+            <div class="flex justify-center items-center gap-2">
+              <button type="button" id="btnDigitalAM" onclick="setDigitalAmPm('AM')" class="flex-1 py-1 rounded-xl font-bold text-xs bg-blue-600 text-white shadow">上午 (AM)</button>
+              <button type="button" id="btnDigitalPM" onclick="setDigitalAmPm('PM')" class="flex-1 py-1 rounded-xl font-bold text-xs bg-slate-200 text-slate-700">下午 (PM)</button>
+            </div>
+
+
+            <!-- Keypad Buttons 0-9 -->
+            <div class="grid grid-cols-3 gap-1">
+              <button onclick="pressKeypad('1')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">1</button>
+              <button onclick="pressKeypad('2')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">2</button>
+              <button onclick="pressKeypad('3')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">3</button>
+              <button onclick="pressKeypad('4')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">4</button>
+              <button onclick="pressKeypad('5')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">5</button>
+              <button onclick="pressKeypad('6')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">6</button>
+              <button onclick="pressKeypad('7')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">7</button>
+              <button onclick="pressKeypad('8')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">8</button>
+              <button onclick="pressKeypad('9')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">9</button>
+              <button onclick="pressKeypad('CLEAR')" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs py-1.5 rounded-xl border border-red-200 shadow-sm active:scale-95">清除</button>
+              <button onclick="pressKeypad('0')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">0</button>
+              <button onclick="pressKeypad('BACK')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs py-1.5 rounded-xl border border-amber-200 shadow-sm active:scale-95">⌫</button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- DURATION KEYPAD INTERFACE (For "Elapsed Time" specifically) -->
+        <div id="durationKeypadArea" class="hidden flex flex-col items-center justify-center w-full max-w-xs my-auto">
+          <div class="bg-amber-50 border-4 border-amber-300 rounded-2xl p-2 w-full flex items-center justify-between shadow-inner mb-2">
+            <div id="durationDisplayBox" class="digital-lcd text-2xl text-amber-700 font-black tracking-wider w-20 text-center">
+              --
+            </div>
+            <button type="button" id="btnDurationUnit" onclick="toggleDurationUnit()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs shadow active:scale-95 transition flex items-center gap-1">
+              <span>分鐘</span> <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+            </button>
+          </div>
+
+
+          <div class="grid grid-cols-3 gap-1 w-full">
+            <button onclick="pressDurationKeypad('1')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">1</button>
+            <button onclick="pressDurationKeypad('2')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">2</button>
+            <button onclick="pressDurationKeypad('3')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">3</button>
+            <button onclick="pressDurationKeypad('4')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">4</button>
+            <button onclick="pressDurationKeypad('5')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">5</button>
+            <button onclick="pressDurationKeypad('6')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">6</button>
+            <button onclick="pressDurationKeypad('7')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">7</button>
+            <button onclick="pressDurationKeypad('8')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">8</button>
+            <button onclick="pressDurationKeypad('9')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">9</button>
+            <button onclick="pressDurationKeypad('CLEAR')" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold text-xs py-1.5 rounded-xl border border-red-200 shadow-sm active:scale-95">清除</button>
+            <button onclick="pressDurationKeypad('0')" class="bg-slate-100 hover:bg-slate-200 font-black text-base py-1.5 rounded-xl border border-slate-300 shadow-sm active:scale-95">0</button>
+            <button onclick="pressDurationKeypad('BACK')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold text-xs py-1.5 rounded-xl border border-amber-200 shadow-sm active:scale-95">⌫</button>
+          </div>
+        </div>
+
+
+        <!-- Submit Button -->
+        <button onclick="submitAnswer()" class="mt-2 w-full max-w-xs bg-blue-600 hover:bg-blue-700 text-white font-black text-sm sm:text-base py-2.5 rounded-2xl shadow-lg transform active:scale-95 transition flex items-center justify-center gap-2 shrink-0">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>確認提交答案</span>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- SCREEN 3: Free Exploration Clock Sandbox -->
+    <section id="freeClockScreen" class="hidden bg-white rounded-3xl p-4 sm:p-6 shadow-xl border border-slate-200 max-w-3xl mx-auto w-full my-auto space-y-4">
+      <div class="text-center">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-800">🕒 自由轉動時鐘探索區</h2>
+        <p class="text-xs text-slate-500">動手轉動分針，即時觀察經過的時間與時針的連動轉動！</p>
+      </div>
+
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+        <!-- Interactive Clock Canvas -->
+        <div class="flex flex-col items-center">
+          <div class="relative w-48 h-48 sm:w-56 sm:h-56">
+            <svg id="freeClockSvg" class="w-full h-full clock-face bg-white rounded-full border-8 border-indigo-900 shadow-md" viewBox="0 0 300 300">
+              <circle cx="150" cy="150" r="142" fill="none" stroke="#e2e8f0" stroke-width="4"/>
+              <g id="freeClockTicks" stroke="#64748b" stroke-linecap="round"></g>
+              <g id="freeClockNumbers" font-family="Noto Sans TC" font-weight="bold" font-size="20" fill="#1e293b" text-anchor="middle" dominant-baseline="central"></g>
+              <line id="freeHourHand" x1="150" y1="150" x2="150" y2="85" stroke="#1e293b" stroke-width="8" stroke-linecap="round"/>
+              <line id="freeMinuteHand" class="hand-interactive" x1="150" y1="150" x2="150" y2="45" stroke="#2563eb" stroke-width="5" stroke-linecap="round"/>
+              <circle cx="150" cy="150" r="8" fill="#1e293b"/>
+              <circle cx="150" cy="150" r="3" fill="#ffffff"/>
+            </svg>
+          </div>
+          <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <button onclick="resetFreeClock()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 shadow-sm flex items-center gap-1 active:scale-95">
+              <i class="fa-solid fa-rotate-left"></i> 重置起點時間
+            </button>
+            <button onclick="setAsInitialTime()" class="px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-300 shadow-sm flex items-center gap-1 active:scale-95">
+              <i class="fa-solid fa-flag"></i> 設為初始時間
+            </button>
+          </div>
+        </div>
+
+
+        <!-- Real-time Status Card -->
+        <div class="space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+          <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+            <div class="text-[10px] text-slate-500 font-bold">初始設定時間：</div>
+            <div id="freeStartTimeDisplay" class="text-base font-black text-indigo-700">09:00 上午</div>
+          </div>
+
+
+          <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+            <div class="text-[10px] text-slate-500 font-bold">當前旋轉時間：</div>
+            <div id="freeCurrentTimeDisplay" class="text-base font-black text-blue-600">09:00 上午</div>
+          </div>
+
+
+          <div class="bg-indigo-600 text-white p-3 rounded-xl shadow-md">
+            <div class="text-[10px] text-indigo-200 font-bold">累積經過時間：</div>
+            <div id="freeElapsedTimeDisplay" class="text-lg font-black mt-0.5">
+              0 小時 0 分鐘 <span class="text-xs font-normal opacity-80">(共 0 分鐘)</span>
+            </div>
+          </div>
+
+
+          <button onclick="returnToMenu()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs transition active:scale-95">
+            返回主選單
+          </button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- SCREEN 4: Results & Certificate Generator -->
+    <section id="resultScreen" class="hidden space-y-4 max-w-2xl mx-auto w-full my-auto">
+      <!-- Summary Card -->
+      <div class="bg-white rounded-3xl p-5 shadow-xl border border-slate-200 text-center space-y-3">
+        <div class="inline-block p-3 rounded-full bg-emerald-100 text-emerald-600 shadow-inner">
+          <i class="fa-solid fa-award text-4xl"></i>
+        </div>
+        <h2 class="text-2xl font-black text-slate-800">挑戰完成！大獲全勝！</h2>
+        <p class="text-slate-500 text-xs sm:text-sm">親愛的 <strong id="resultStudentName" class="text-indigo-600">同學</strong>，恭喜你完成所有時間考驗！</p>
+
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 gap-3 max-w-xs mx-auto pt-1">
+          <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl">
+            <div class="text-[10px] text-emerald-600 font-bold">答對題數</div>
+            <div id="resultScore" class="text-2xl font-black text-emerald-700 mt-0.5">5 / 5</div>
+          </div>
+          <div class="bg-blue-50 border border-blue-200 p-3 rounded-2xl">
+            <div class="text-[10px] text-blue-600 font-bold">總花費時間</div>
+            <div id="resultTimeSpent" class="text-2xl font-black text-blue-700 mt-0.5">45 秒</div>
+          </div>
+        </div>
+
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-2 justify-center pt-2">
+          <button onclick="restartGame()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-md text-xs sm:text-sm transition flex items-center gap-1.5 active:scale-95">
+            <i class="fa-solid fa-rotate-right"></i> 再挑戰一次
+          </button>
+          <button onclick="returnToMenu()" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-2xl text-xs sm:text-sm transition active:scale-95">
+            返回主菜單
+          </button>
+        </div>
+      </div>
+
+
+      <!-- Wrong Questions Review Section -->
+      <div id="wrongReviewCard" class="bg-white rounded-3xl p-4 shadow-xl border border-slate-200 space-y-3">
+        <h3 class="text-base sm:text-lg font-black text-slate-800 flex items-center gap-2 border-b pb-2">
+          <i class="fa-solid fa-clipboard-list text-amber-500"></i>
+          <span>錯題詳細記錄與解說</span>
+        </h3>
+        <div id="wrongList" class="space-y-3">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+
+      <!-- Downloadable Certificate Section -->
+      <div id="certificateContainer" class="bg-white rounded-3xl p-4 shadow-xl border border-slate-200 space-y-3 text-center">
+        <h3 class="text-base sm:text-lg font-black text-slate-800 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-certificate text-yellow-500"></i>
+          <span>精美獲獎證書生成</span>
+        </h3>
+        <p class="text-xs text-slate-500">系統已為你生成專屬嘉許狀，點擊下方按鈕即可下載以作留念！</p>
+
+
+        <div class="overflow-x-auto flex justify-center py-1">
+          <canvas id="certCanvas" class="max-w-full h-auto rounded-xl shadow-lg border border-slate-200"></canvas>
+        </div>
+
+
+        <button onclick="downloadCertificate()" class="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white font-black text-sm rounded-2xl shadow-lg transition flex items-center justify-center gap-2 mx-auto active:scale-95">
+          <i class="fa-solid fa-file-arrow-down"></i>
+          <span>下載嘉許狀證書 (JPG 格式)</span>
+        </button>
+      </div>
+
+
+      <!-- Zero Score Message -->
+      <div id="zeroScoreMsg" class="hidden bg-slate-100 rounded-3xl p-5 shadow-inner border border-slate-300 text-center space-y-2">
+        <i class="fa-solid fa-face-frown text-3xl text-slate-400"></i>
+        <h3 class="text-xl font-black text-slate-600">仍需努力！</h3>
+        <p class="text-xs text-slate-500">這次沒有答對題目，所以無法生成證書。不要灰心，再挑戰一次吧！</p>
+      </div>
+    </section>
+
+
+  </main>
+
+
+  <!-- Feedback Overlay Modal (For Wrong Answers: 5s pause + detailed explanation) -->
+  <div id="explanationModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl modal-enter border-4 border-amber-400 text-slate-800 relative">
+      <div class="flex items-center justify-between border-b pb-2 mb-3">
+        <div class="flex items-center gap-2 text-amber-600 font-black text-base">
+          <i class="fa-solid fa-circle-xmark text-xl text-red-500"></i>
+          <span>答錯了，請觀看解題步驟！</span>
+        </div>
+        <div id="modalCountdown" class="bg-amber-100 text-amber-800 font-extrabold px-2.5 py-0.5 rounded-full text-[10px]">
+          5秒後繼續...
+        </div>
+      </div>
+
+
+      <div class="space-y-2.5 text-xs sm:text-sm">
+        <div class="bg-red-50 p-2.5 rounded-xl border border-red-200 text-red-900">
+          <strong>你的答案：</strong> <span id="modalUserAns">--</span>
+        </div>
+        <div class="bg-emerald-50 p-2.5 rounded-xl border border-emerald-200 text-emerald-900">
+          <strong>正確答案：</strong> <span id="modalCorrectAns">--</span>
+        </div>
+
+
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1">
+            <i class="fa-solid fa-lightbulb text-yellow-500"></i> 詳細解題思維：
+          </h4>
+          <p id="modalExplanationText" class="text-slate-600 leading-relaxed font-medium">
+            解題說明...
+          </p>
+        </div>
+      </div>
+
+
+      <button id="modalBtnNext" disabled onclick="closeModalAndNext()" class="mt-3 w-full bg-slate-300 text-slate-500 cursor-not-allowed font-bold py-2.5 rounded-xl transition text-xs sm:text-sm">
+        請稍候 (5)
+      </button>
+    </div>
+  </div>
+
+
+  <!-- Footer -->
+  <footer class="bg-slate-800 text-slate-400 py-1.5 text-center text-[10px] sm:text-xs border-t border-slate-700 shrink-0">
+    <p>© 保良局田家炳小學 | 小學三年級數學：時間應用題專用</p>
+  </footer>
+
+
+  <script>
+    /* ==========================================================================
+       GLOBAL STATE VARIABLES
+       ========================================================================== */
+    let studentName = "玩家1";
+    let displayMode = 'analog'; // 'analog', 'digital', 'free'
+    let targetMode = 'end';    // 'end', 'start', 'elapsed', 'mixed'
+    
+    let currentQuestionIndex = 0;
+    let scoreCount = 0;
+    let wrongLog = [];
+    let timerSeconds = 120;
+    let timeSpentSeconds = 0;
+    let timerInterval = null;
+    const TOTAL_QUESTIONS = 5;
+
+
+    let questionsList = [];
+    let currentQuestion = null;
+
+
+    // Interactive time state
+    let userHours = 8;
+    let userMinutes = 0;
+    let userAmPm = 'AM';
+
+
+    // Keypad buffers
+    let keypadBuffer = "";
+    let durationBuffer = "";
+    let durationUnit = "分鐘";
+
+
+    // Free sandbox variables
+    let freeStartHour = 9;
+    let freeStartMin = 0;
+    let freeCurrentHour = 9;
+    let freeCurrentMin = 0;
+
+
+    /* ==========================================================================
+       AUDIO SYNTHESIZER (Web Audio API - No external files required)
+       ========================================================================== */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+
+        const now = audioCtx.currentTime;
+
+
+        if (type === 'tick') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(600, now);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'correct') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+          osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        } else if (type === 'wrong') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.setValueAtTime(180, now + 0.15);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        }
+      } catch (e) {
+        console.log("Audio play suppressed");
+      }
+    }
+
+
+    /* ==========================================================================
+       SETUP MODE SELECTION FUNCTIONS (STRICTLY IN GLOBAL SCOPE)
+       ========================================================================== */
+    function selectDisplayMode(mode) {
+      displayMode = mode;
+      
+      const btnAnalog = document.getElementById('btnDisplayAnalog');
+      const btnDigital = document.getElementById('btnDisplayDigital');
+      const btnFree = document.getElementById('btnDisplayFree');
+      const targetContainer = document.getElementById('targetTypeContainer');
+
+
+      [btnAnalog, btnDigital, btnFree].forEach(btn => btn.classList.remove('active-mode-btn'));
+
+
+      if (mode === 'analog') {
+        btnAnalog.classList.add('active-mode-btn');
+        targetContainer.style.display = 'block';
+      } else if (mode === 'digital') {
+        btnDigital.classList.add('active-mode-btn');
+        targetContainer.style.display = 'block';
+      } else if (mode === 'free') {
+        btnFree.classList.add('active-mode-btn');
+        targetContainer.style.display = 'none';
+      }
+      playSound('tick');
+    }
+
+
+    function selectTargetMode(mode) {
+      targetMode = mode;
+      const targetBtns = document.querySelectorAll('.target-btn');
+      targetBtns.forEach(btn => btn.classList.remove('active-mode-btn'));
+
+
+      if (mode === 'end') document.getElementById('btnTargetEnd').classList.add('active-mode-btn');
+      if (mode === 'start') document.getElementById('btnTargetStart').classList.add('active-mode-btn');
+      if (mode === 'elapsed') document.getElementById('btnTargetElapsed').classList.add('active-mode-btn');
+      if (mode === 'mixed') document.getElementById('btnTargetMixed').classList.add('active-mode-btn');
+      
+      playSound('tick');
+    }
+
+
+    /* ==========================================================================
+       TIME & MATHEMATICAL UTILITIES
+       ========================================================================== */
+    // Convert 12-hour (1..12, 'AM'/'PM') + min -> total minutes from 00:00 (0..1439)
+    function timeToMins24(h, m, amPm) {
+      let hour24 = h % 12;
+      if (amPm === 'PM') hour24 += 12;
+      return hour24 * 60 + m;
+    }
+
+
+    // Convert total 24-hour minutes -> {h: 1..12, m: 0..59, amPm: 'AM'/'PM'}
+    function mins24ToTime(totalMins) {
+      totalMins = ((totalMins % 1440) + 1440) % 1440;
+      let hour24 = Math.floor(totalMins / 60);
+      let mins = totalMins % 60;
+      let amPm = hour24 < 12 ? 'AM' : 'PM';
+      let h12 = hour24 % 12;
+      if (h12 === 0) h12 = 12;
+      return { h: h12, m: mins, amPm: amPm };
+    }
+
+
+    function formatTimeString(h, m, amPm) {
+      const minStr = m < 10 ? '0' + m : m;
+      const amPmText = amPm === 'AM' ? '上午' : '下午';
+      return `${amPmText} ${h}:${minStr}`;
+    }
+
+
+    /* ==========================================================================
+       SCENARIO & QUESTION GENERATOR
+       ========================================================================== */
+    const SCENARIOS = [
+      {
+        title: "搭乘巴士",
+        svg: `<svg class="w-full h-full text-indigo-600" viewBox="0 0 64 64" fill="currentColor"><path d="M52 16H12c-3.3 0-6 2.7-6 6v24c0 2.2 1.8 4 4 4h2v4c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-4h24v4c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2v-4h2c2.2 0 4-1.8 4-4V22c0-3.3-2.7-6-6-6zm-32 4h24v12H20V20zm-4 22c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4zm32 0c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z"/></svg>`,
+        verbStart: "上車", verbEnd: "下車"
+      },
+      {
+        title: "診所看醫生",
+        svg: `<svg class="w-full h-full text-emerald-600" viewBox="0 0 64 64" fill="currentColor"><path d="M50 12H14c-2.2 0-4 1.8-4 4v32c0 2.2 1.8 4 4 4h36c2.2 0 4-1.8 4-4V16c0-2.2-1.8-4-4-4zm-14 24h-6v6h-4v-6h-6v-4h6v-6h4v6h6v4z"/></svg>`,
+        verbStart: "開始看診", verbEnd: "看完醫生"
+      },
+      {
+        title: "圖書館閱讀",
+        svg: `<svg class="w-full h-full text-blue-600" viewBox="0 0 64 64" fill="currentColor"><path d="M56 8H8c-2.2 0-4 1.8-4 4v40c0 2.2 1.8 4 4 4h48c2.2 0 4-1.8 4-4V12c0-2.2-1.8-4-4-4zm-4 38H12V14h40v32zM20 20h24v4H20zm0 8h24v4H20zm0 8h16v4H20z"/></svg>`,
+        verbStart: "進入圖書館", verbEnd: "離開圖書館"
+      },
+      {
+        title: "烘焙蛋糕",
+        svg: `<svg class="w-full h-full text-amber-600" viewBox="0 0 64 64" fill="currentColor"><path d="M52 24h-6.2c.8-1.2 1.2-2.5 1.2-4 0-4.4-3.6-8-8-8-2.6 0-4.9 1.2-6.4 3.2C31.1 13.2 28.8 12 26.2 12c-4.4 0-8 3.6-8 8 0 1.5.4 2.8 1.2 4H12c-2.2 0-4 1.8-4 4v20c0 2.2 1.8 4 4 4h40c2.2 0 4-1.8 4-4V28c0-2.2-1.8-4-4-4zm-20 20H16v-4h16v4zm16-8H16v-4h32v4z"/></svg>`,
+        verbStart: "放入烤箱", verbEnd: "烘焙完成"
+      },
+      {
+        title: "觀賞電影",
+        svg: `<svg class="w-full h-full text-purple-600" viewBox="0 0 64 64" fill="currentColor"><path d="M52 10H12c-2.2 0-4 1.8-4 4v36c0 2.2 1.8 4 4 4h40c2.2 0 4-1.8 4-4V14c0-2.2-1.8-4-4-4zM24 42V22l18 10-18 10z"/></svg>`,
+        verbStart: "電影開始放映", verbEnd: "電影散場"
+      }
+    ];
+
+
+    function generateQuestions() {
+      questionsList = [];
+      for (let i = 0; i < TOTAL_QUESTIONS; i++) {
+        const scenario = SCENARIOS[i % SCENARIOS.length];
+        
+        // Randomize Start Time (1..12 hrs, 0..59 mins, AM/PM)
+        const startH = Math.floor(Math.random() * 12) + 1;
+        const startM = Math.floor(Math.random() * 60);
+        const startAmPm = Math.random() < 0.5 ? 'AM' : 'PM';
+        const startTotalMins = timeToMins24(startH, startM, startAmPm);
+
+
+        // Strict Duration rule: EITHER 1-59 mins OR 1-12 whole hours
+        const isMinutesDuration = Math.random() < 0.6;
+        let durH = 0;
+        let durM = 0;
+        
+        if (isMinutesDuration) {
+          durM = Math.floor(Math.random() * 59) + 1; // 1..59 mins
+        } else {
+          durH = Math.floor(Math.random() * 11) + 1; // 1..11 hours
+        }
+
+
+        const elapsedTotalMins = durH * 60 + durM;
+        const endTotalMins = startTotalMins + elapsedTotalMins;
+        const endObj = mins24ToTime(endTotalMins);
+
+
+        // Target type determination
+        let currentTarget = targetMode;
+        if (targetMode === 'mixed') {
+          const types = ['end', 'start', 'elapsed'];
+          currentTarget = types[i % 3];
+        }
+
+
+        // String representations
+        const startStr = formatTimeString(startH, startM, startAmPm);
+        const endStr = formatTimeString(endObj.h, endObj.m, endObj.amPm);
+        const elapsedStr = durH > 0 ? `${durH} 小時` : `${durM} 分鐘`;
+
+
+        // Story & Explanation text creation
+        let storyText = "";
+        let explanation = "";
+
+
+        if (currentTarget === 'end') {
+          storyText = `小明在 ${startStr} ${scenario.verbStart}，經歷了 ${elapsedStr} 後 ${scenario.verbEnd}。請問小明是在什麼時間 ${scenario.verbEnd} 的？`;
+          explanation = `【求結束時間】計算方法：開始時間 + 經過時間。\n${startStr} 加上 ${elapsedStr}，等於 ${endStr}。`;
+        } else if (currentTarget === 'start') {
+          storyText = `小明在 ${endStr} ${scenario.verbEnd}，整個活動共用了 ${elapsedStr}。請問小明是在什麼時間 ${scenario.verbStart} 的？`;
+          explanation = `【求開始時間】計算方法：結束時間 - 經過時間。\n${endStr} 減去 ${elapsedStr}，往前倒推等於 ${startStr}。`;
+        } else {
+          storyText = `小明在 ${startStr} ${scenario.verbStart}，並於 ${endStr} ${scenario.verbEnd}。請問活動共經過了多少時間？`;
+          explanation = `【求經過時間】計算方法：結束時間 - 開始時間。\n從 ${startStr} 到 ${endStr}，時間一共經過了 ${elapsedStr}。`;
+        }
+
+
+        questionsList.push({
+          scenario: scenario,
+          targetType: currentTarget,
+          storyText: storyText,
+          explanation: explanation,
+          startH: startH,
+          startM: startM,
+          startAmPm: startAmPm,
+          startStr: startStr,
+          durH: durH,
+          durM: durM,
+          elapsedStr: elapsedStr,
+          endH: endObj.h,
+          endM: endObj.m,
+          endAmPm: endObj.amPm,
+          endStr: endStr
+        });
+      }
+    }
+
+
+    /* ==========================================================================
+       SVG CLOCK RENDERING & DRAGGING (MINUTE HAND ONLY)
+       ========================================================================== */
+    function initClockFace(ticksId, numbersId) {
+      const ticksG = document.getElementById(ticksId);
+      const numbersG = document.getElementById(numbersId);
+      ticksG.innerHTML = '';
+      numbersG.innerHTML = '';
+
+
+      for (let i = 0; i < 60; i++) {
+        const angle = (i * 6) * Math.PI / 180;
+        const isHour = i % 5 === 0;
+        const r1 = 140;
+        const r2 = isHour ? 124 : 132;
+        
+        const x1 = 150 + r1 * Math.sin(angle);
+        const y1 = 150 - r1 * Math.cos(angle);
+        const x2 = 150 + r2 * Math.sin(angle);
+        const y2 = 150 - r2 * Math.cos(angle);
+
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke-width', isHour ? '3' : '1.5');
+        line.setAttribute('stroke', isHour ? '#1e293b' : '#94a3b8');
+        ticksG.appendChild(line);
+
+
+        if (isHour) {
+          const num = i === 0 ? 12 : i / 5;
+          const nr = 108;
+          const nx = 150 + nr * Math.sin(angle);
+          const ny = 150 - nr * Math.cos(angle);
+
+
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          text.setAttribute('x', nx);
+          text.setAttribute('y', ny);
+          text.textContent = num;
+          numbersG.appendChild(text);
+        }
+      }
+    }
+
+
+    function renderClockHands(hourHandId, minuteHandId, hours, minutes) {
+      const minDeg = minutes * 6;
+      const hourDeg = (hours % 12) * 30 + (minutes / 60) * 30;
+
+
+      const minHand = document.getElementById(minuteHandId);
+      const hourHand = document.getElementById(hourHandId);
+
+
+      if (minHand) minHand.setAttribute('transform', `rotate(${minDeg} 150 150)`);
+      if (hourHand) hourHand.setAttribute('transform', `rotate(${hourDeg} 150 150)`);
+    }
+
+
+    function initHandEvents(svgId, minCb) {
+      const svg = document.getElementById(svgId);
+      if (!svg) return;
+      let isDragging = false;
+
+
+      function getAngle(e) {
+        const rect = svg.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+
+
+        const dx = clientX - cx;
+        const dy = clientY - cy;
+
+
+        let rad = Math.atan2(dy, dx) + Math.PI / 2;
+        if (rad < 0) rad += 2 * Math.PI;
+        return rad;
+      }
+
+
+      function handleStart(e) {
+        isDragging = true;
+        handleMove(e);
+      }
+
+
+      function handleMove(e) {
+        if (!isDragging) return;
+        const rad = getAngle(e);
+        let minutes = Math.round((rad / (2 * Math.PI)) * 60) % 60;
+        minCb(minutes);
+      }
+
+
+      function handleEnd() {
+        isDragging = false;
+      }
+
+
+      svg.addEventListener('mousedown', handleStart);
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleEnd);
+
+
+      svg.addEventListener('touchstart', (e) => { handleStart(e); e.preventDefault(); }, {passive: false});
+      window.addEventListener('touchmove', (e) => { if (isDragging) { handleMove(e); e.preventDefault(); } }, {passive: false});
+      window.addEventListener('touchend', handleEnd);
+    }
+
+
+    /* ==========================================================================
+       GAME LIFECYCLE & TIMER MANAGEMENT
+       ========================================================================== */
+    function startGame() {
+      const inputName = document.getElementById('studentNameInput').value.trim();
+      studentName = inputName || "玩家1";
+
+
+      document.getElementById('setupScreen').classList.add('hidden');
+
+
+      if (displayMode === 'free') {
+        document.getElementById('headerStats').classList.add('hidden');
+        document.getElementById('freeClockScreen').classList.remove('hidden');
+        initFreeClock();
+        return;
+      }
+
+
+      document.getElementById('headerStats').classList.remove('hidden');
+      document.getElementById('gameplayScreen').classList.remove('hidden');
+
+
+      currentQuestionIndex = 0;
+      scoreCount = 0;
+      wrongLog = [];
+      timerSeconds = 120;
+      timeSpentSeconds = 0;
+
+
+      generateQuestions();
+      initClockFace('clockTicks', 'clockNumbers');
+
+
+      // Bind minute hand drag event
+      initHandEvents('clockSvg', (newMin) => {
+        let minDiff = newMin - userMinutes;
+        let hourDiff = 0;
+        if (minDiff < -30) hourDiff = 1;     // Crossed 12 o'clock clockwise
+        else if (minDiff > 30) hourDiff = -1; // Crossed 12 o'clock counter-clockwise
+
+
+        if (hourDiff !== 0) {
+          let vHour24 = timeToMins24(userHours, 0, userAmPm) / 60;
+          vHour24 = ((vHour24 + hourDiff) % 24 + 24) % 24;
+          let obj = mins24ToTime(vHour24 * 60);
+          userHours = obj.h;
+          userAmPm = obj.amPm;
+          setAmPm(userAmPm);
+        }
+        userMinutes = newMin;
+        updateAnalogDisplay();
+        playSound('tick');
+      });
+
+
+      startTimer();
+      loadQuestion();
+    }
+
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      const timerContainer = document.getElementById('timerContainer');
+      const timerText = document.getElementById('timerText');
+
+
+      timerInterval = setInterval(() => {
+        timerSeconds--;
+        timeSpentSeconds++;
+        timerText.textContent = `${timerSeconds}秒`;
+
+
+        if (timerSeconds <= 10) {
+          timerContainer.classList.add('timer-alert');
+          playSound('tick');
+        } else {
+          timerContainer.classList.remove('timer-alert');
+        }
+
+
+        if (timerSeconds <= 0) {
+          clearInterval(timerInterval);
+          finishGame();
+        }
+      }, 1000);
+    }
+
+
+    /* ==========================================================================
+       QUESTION LOADING & DISPLAY CONTROLS
+       ========================================================================== */
+    function loadQuestion() {
+      currentQuestion = questionsList[currentQuestionIndex];
+
+
+      document.getElementById('progressText').textContent = `${currentQuestionIndex + 1}/${TOTAL_QUESTIONS}`;
+      document.getElementById('scenarioArt').innerHTML = currentQuestion.scenario.svg;
+      document.getElementById('questionText').textContent = currentQuestion.storyText;
+
+
+      const targetBadge = document.getElementById('targetBadge');
+      const instructionBox = document.getElementById('answerInstruction');
+
+
+      if (currentQuestion.targetType === 'end') {
+        targetBadge.textContent = "求【結束時間】";
+        instructionBox.textContent = displayMode === 'analog' ? "請撥動時鐘分針回答結束時間：" : "請輸入結束時間：";
+      } else if (currentQuestion.targetType === 'start') {
+        targetBadge.textContent = "求【開始時間】";
+        instructionBox.textContent = displayMode === 'analog' ? "請撥動時鐘分針回答開始時間：" : "請輸入開始時間：";
+      } else {
+        targetBadge.textContent = "求【經過時間】";
+        instructionBox.textContent = "請利用數字鍵回答經過的時間：";
+      }
+
+
+      document.getElementById('clueStartVal').textContent = currentQuestion.targetType === 'start' ? '❓' : currentQuestion.startStr;
+      document.getElementById('clueElapsedVal').textContent = currentQuestion.targetType === 'elapsed' ? '❓' : currentQuestion.elapsedStr;
+      document.getElementById('clueEndVal').textContent = currentQuestion.targetType === 'end' ? '❓' : currentQuestion.endStr;
+
+
+      // 初始化時鐘時間，使其與題目顯示的已知時間一致
+      if (currentQuestion.targetType === 'start') {
+        // 求「開始時間」時，初始時鐘設定為題目給出的「結束時間」
+        userHours = currentQuestion.endH;
+        userMinutes = currentQuestion.endM;
+        userAmPm = currentQuestion.endAmPm;
+      } else {
+        // 求「結束時間」或「經過時間」時，初始時鐘設定為題目給出的「開始時間」
+        userHours = currentQuestion.startH;
+        userMinutes = currentQuestion.startM;
+        userAmPm = currentQuestion.startAmPm;
+      }
+
+
+      keypadBuffer = "";
+      durationBuffer = "";
+      durationUnit = "分鐘";
+      updateDurationDisplay();
+
+
+      const analogClockArea = document.getElementById('analogClockArea');
+      const digitalClockArea = document.getElementById('digitalClockArea');
+      const durationKeypadArea = document.getElementById('durationKeypadArea');
+
+
+      if (currentQuestion.targetType === 'elapsed') {
+        analogClockArea.classList.add('hidden');
+        digitalClockArea.classList.add('hidden');
+        durationKeypadArea.classList.remove('hidden');
+      } else {
+        durationKeypadArea.classList.add('hidden');
+        if (displayMode === 'analog') {
+          analogClockArea.classList.remove('hidden');
+          digitalClockArea.classList.add('hidden');
+          setAmPm(userAmPm);
+          updateAnalogDisplay();
+        } else {
+          analogClockArea.classList.add('hidden');
+          digitalClockArea.classList.remove('hidden');
+          setDigitalAmPm(userAmPm);
+          updateDigitalDisplay();
+        }
+      }
+    }
+
+
+    function setAmPm(ampm) {
+      userAmPm = ampm;
+      document.getElementById('btnAM').className = ampm === 'AM' ? 'px-3 py-1 rounded-lg font-bold text-xs bg-white text-blue-700 shadow' : 'px-3 py-1 rounded-lg font-bold text-xs text-slate-600';
+      document.getElementById('btnPM').className = ampm === 'PM' ? 'px-3 py-1 rounded-lg font-bold text-xs bg-white text-blue-700 shadow' : 'px-3 py-1 rounded-lg font-bold text-xs text-slate-600';
+      updateAnalogDisplay();
+    }
+
+
+    function updateAnalogDisplay() {
+      renderClockHands('hourHand', 'minuteHand', userHours, userMinutes);
+      const minFormatted = userMinutes < 10 ? '0' + userMinutes : userMinutes;
+      const hourFormatted = userHours < 10 ? '0' + userHours : userHours;
+      document.getElementById('analogLiveReading').textContent = `${hourFormatted}:${minFormatted} ${userAmPm === 'AM' ? '上午' : '下午'}`;
+    }
+
+
+    function setDigitalAmPm(ampm) {
+      userAmPm = ampm;
+      document.getElementById('btnDigitalAM').className = ampm === 'AM' ? 'flex-1 py-1 rounded-xl font-bold text-xs bg-blue-600 text-white shadow' : 'flex-1 py-1 rounded-xl font-bold text-xs bg-slate-200 text-slate-700';
+      document.getElementById('btnDigitalPM').className = ampm === 'PM' ? 'flex-1 py-1 rounded-xl font-bold text-xs bg-blue-600 text-white shadow' : 'flex-1 py-1 rounded-xl font-bold text-xs bg-slate-200 text-slate-700';
+      updateDigitalDisplay();
+    }
+
+
+    function pressKeypad(key) {
+      playSound('tick');
+      if (key === 'CLEAR') {
+        keypadBuffer = "";
+      } else if (key === 'BACK') {
+        keypadBuffer = keypadBuffer.slice(0, -1);
+      } else if (keypadBuffer.length < 4) {
+        keypadBuffer += key;
+      }
+      updateDigitalDisplay();
+    }
+
+
+    function updateDigitalDisplay() {
+      let displayStr = "-- : --";
+      if (keypadBuffer.length === 1) {
+        displayStr = `0${keypadBuffer} : --`;
+      } else if (keypadBuffer.length === 2) {
+        displayStr = `${keypadBuffer} : --`;
+      } else if (keypadBuffer.length === 3) {
+        displayStr = `0${keypadBuffer[0]} : ${keypadBuffer.slice(1)}`;
+      } else if (keypadBuffer.length === 4) {
+        displayStr = `${keypadBuffer.slice(0, 2)} : ${keypadBuffer.slice(2)}`;
+      }
+      document.getElementById('digitalDisplayBox').textContent = `${displayStr} ${userAmPm}`;
+    }
+
+
+    function toggleDurationUnit() {
+      durationUnit = durationUnit === '分鐘' ? '小時' : '分鐘';
+      const btn = document.getElementById('btnDurationUnit');
+      btn.innerHTML = `<span>${durationUnit}</span> <i class="fa-solid fa-arrows-rotate text-[10px]"></i>`;
+      playSound('tick');
+    }
+
+
+    function pressDurationKeypad(key) {
+      playSound('tick');
+      if (key === 'CLEAR') {
+        durationBuffer = "";
+      } else if (key === 'BACK') {
+        durationBuffer = durationBuffer.slice(0, -1);
+      } else if (durationBuffer.length < 2) {
+        durationBuffer += key;
+      }
+      updateDurationDisplay();
+    }
+
+
+    function updateDurationDisplay() {
+      document.getElementById('durationDisplayBox').textContent = durationBuffer === "" ? "--" : durationBuffer;
+    }
+
+
+    /* ==========================================================================
+       ANSWER EVALUATION & SUBMISSION
+       ========================================================================== */
+    function submitAnswer() {
+      let isCorrect = false;
+      let userAnsFormatted = "";
+      let correctAnsFormatted = "";
+
+
+      if (currentQuestion.targetType === 'end') {
+        correctAnsFormatted = currentQuestion.endStr;
+        if (displayMode === 'analog') {
+          userAnsFormatted = formatTimeString(userHours, userMinutes, userAmPm);
+          isCorrect = (userHours === currentQuestion.endH && userMinutes === currentQuestion.endM && userAmPm === currentQuestion.endAmPm);
+        } else {
+          let h = parseInt(keypadBuffer.slice(0, 2)) || 0;
+          let m = parseInt(keypadBuffer.slice(2)) || 0;
+          userAnsFormatted = formatTimeString(h, m, userAmPm);
+          isCorrect = (h === currentQuestion.endH && m === currentQuestion.endM && userAmPm === currentQuestion.endAmPm);
+        }
+      } else if (currentQuestion.targetType === 'start') {
+        correctAnsFormatted = currentQuestion.startStr;
+        if (displayMode === 'analog') {
+          userAnsFormatted = formatTimeString(userHours, userMinutes, userAmPm);
+          isCorrect = (userHours === currentQuestion.startH && userMinutes === currentQuestion.startM && userAmPm === currentQuestion.startAmPm);
+        } else {
+          let h = parseInt(keypadBuffer.slice(0, 2)) || 0;
+          let m = parseInt(keypadBuffer.slice(2)) || 0;
+          userAnsFormatted = formatTimeString(h, m, userAmPm);
+          isCorrect = (h === currentQuestion.startH && m === currentQuestion.startM && userAmPm === currentQuestion.startAmPm);
+        }
+      } else {
+        correctAnsFormatted = currentQuestion.elapsedStr;
+        let inputVal = parseInt(durationBuffer) || 0;
+        userAnsFormatted = `${inputVal} ${durationUnit}`;
+
+
+        if (durationUnit === '小時') {
+          isCorrect = (inputVal === currentQuestion.durH && currentQuestion.durM === 0);
+        } else {
+          isCorrect = (inputVal === currentQuestion.durM && currentQuestion.durH === 0);
+        }
+      }
+
+
+      if (isCorrect) {
+        playSound('correct');
+        scoreCount++;
+        nextQuestion();
+      } else {
+        playSound('wrong');
+        wrongLog.push({
+          question: currentQuestion,
+          userAns: userAnsFormatted,
+          correctAns: correctAnsFormatted
+        });
+        showExplanationModal(userAnsFormatted, correctAnsFormatted, currentQuestion.explanation);
+      }
+    }
+
+
+    function showExplanationModal(userAns, correctAns, explanation) {
+      document.getElementById('modalUserAns').textContent = userAns;
+      document.getElementById('modalCorrectAns').textContent = correctAns;
+      document.getElementById('modalExplanationText').textContent = explanation;
+
+
+      const modal = document.getElementById('explanationModal');
+      const modalBtn = document.getElementById('modalBtnNext');
+      const countdownTag = document.getElementById('modalCountdown');
+
+
+      modal.classList.remove('hidden');
+      modalBtn.disabled = true;
+      modalBtn.className = "mt-3 w-full bg-slate-300 text-slate-500 cursor-not-allowed font-bold py-2.5 rounded-xl transition text-xs sm:text-sm";
+
+
+      let pauseLeft = 5;
+      countdownTag.textContent = `${pauseLeft}秒後可繼續...`;
+      modalBtn.textContent = `請稍候 (${pauseLeft})`;
+
+
+      const modalTimer = setInterval(() => {
+        pauseLeft--;
+        if (pauseLeft > 0) {
+          countdownTag.textContent = `${pauseLeft}秒後可繼續...`;
+          modalBtn.textContent = `請稍候 (${pauseLeft})`;
+        } else {
+          clearInterval(modalTimer);
+          countdownTag.textContent = "已可繼續";
+          modalBtn.disabled = false;
+          modalBtn.className = "mt-3 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow-lg transition active:scale-95 text-xs sm:text-sm";
+          modalBtn.textContent = "理解了，進入下一題";
+        }
+      }, 1000);
+    }
+
+
+    function closeModalAndNext() {
+      document.getElementById('explanationModal').classList.add('hidden');
+      nextQuestion();
+    }
+
+
+    function nextQuestion() {
+      currentQuestionIndex++;
+      if (currentQuestionIndex < TOTAL_QUESTIONS) {
+        loadQuestion();
+      } else {
+        finishGame();
+      }
+    }
+
+
+    /* ==========================================================================
+       FREE CLOCK EXPLORATION MODE
+       ========================================================================== */
+    function initFreeClock() {
+      initClockFace('freeClockTicks', 'freeClockNumbers');
+      freeStartHour = 9;
+      freeStartMin = 0;
+      freeCurrentHour = 9;
+      freeCurrentMin = 0;
+
+
+      updateFreeClockUI();
+
+
+      initHandEvents('freeClockSvg', (newMin) => {
+        let diff = newMin - freeCurrentMin;
+        if (diff < -30) freeCurrentHour++;
+        else if (diff > 30) freeCurrentHour--;
+        freeCurrentMin = newMin;
+        updateFreeClockUI();
+        playSound('tick');
+      });
+    }
+
+
+    function updateFreeClockUI() {
+      renderClockHands('freeHourHand', 'freeMinuteHand', freeCurrentHour, freeCurrentMin);
+
+
+      const startMinStr = freeStartMin < 10 ? '0' + freeStartMin : freeStartMin;
+      const startHourStr = freeStartHour < 10 ? '0' + freeStartHour : freeStartHour;
+      document.getElementById('freeStartTimeDisplay').textContent = `${startHourStr}:${startMinStr} 上午`;
+
+
+      const currMinStr = freeCurrentMin < 10 ? '0' + freeCurrentMin : freeCurrentMin;
+      const currHourDisplay = ((freeCurrentHour - 1) % 12) + 1;
+      const currHourStr = currHourDisplay < 10 ? '0' + currHourDisplay : currHourDisplay;
+      const ampmStr = freeCurrentHour >= 12 ? '下午' : '上午';
+      document.getElementById('freeCurrentTimeDisplay').textContent = `${currHourStr}:${currMinStr} ${ampmStr}`;
+
+
+      const totalStartMins = freeStartHour * 60 + freeStartMin;
+      const totalCurrentMins = freeCurrentHour * 60 + freeCurrentMin;
+      const diffMins = Math.max(0, totalCurrentMins - totalStartMins);
+
+
+      const elapH = Math.floor(diffMins / 60);
+      const elapM = diffMins % 60;
+
+
+      document.getElementById('freeElapsedTimeDisplay').innerHTML = `${elapH} 小時 ${elapM} 分鐘 <span class="text-xs font-normal opacity-80">(共 ${diffMins} 分鐘)</span>`;
+    }
+
+
+    function setAsInitialTime() {
+      freeStartHour = freeCurrentHour;
+      freeStartMin = freeCurrentMin;
+      updateFreeClockUI();
+      playSound('tick');
+    }
+
+
+    function resetFreeClock() {
+      freeStartHour = 9;
+      freeStartMin = 0;
+      freeCurrentHour = 9;
+      freeCurrentMin = 0;
+      updateFreeClockUI();
+    }
+
+
+    /* ==========================================================================
+       RESULTS & CERTIFICATE GENERATOR
+       ========================================================================== */
+    function finishGame() {
+      clearInterval(timerInterval);
+      document.getElementById('gameplayScreen').classList.add('hidden');
+      document.getElementById('resultScreen').classList.remove('hidden');
+
+
+      document.getElementById('resultStudentName').textContent = studentName;
+      document.getElementById('resultScore').textContent = `${scoreCount} / ${TOTAL_QUESTIONS}`;
+      document.getElementById('resultTimeSpent').textContent = `${timeSpentSeconds} 秒`;
+
+
+      const wrongList = document.getElementById('wrongList');
+      const wrongReviewCard = document.getElementById('wrongReviewCard');
+      wrongList.innerHTML = '';
+
+
+      if (wrongLog.length === 0) {
+        wrongReviewCard.classList.add('hidden');
+      } else {
+        wrongReviewCard.classList.remove('hidden');
+        wrongLog.forEach((item, index) => {
+          const div = document.createElement('div');
+          div.className = "bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1 text-xs sm:text-sm";
+          div.innerHTML = `
+            <div class="font-bold text-slate-800">錯題 ${index + 1}：${item.question.storyText}</div>
+            <div class="flex flex-wrap gap-3 text-xs">
+              <span class="text-red-600 font-bold">你的答案：${item.userAns}</span>
+              <span class="text-emerald-600 font-bold">正確答案：${item.correctAns}</span>
+            </div>
+            <div class="text-slate-600 text-xs bg-white p-2 rounded-lg border border-slate-200">
+              💡 ${item.question.explanation}
+            </div>
+          `;
+          wrongList.appendChild(div);
+        });
+      }
+
+
+      const certContainer = document.getElementById('certificateContainer');
+      const zeroScoreMsg = document.getElementById('zeroScoreMsg');
+
+
+      if (scoreCount === 0) {
+        certContainer.classList.add('hidden');
+        zeroScoreMsg.classList.remove('hidden');
+      } else {
+        certContainer.classList.remove('hidden');
+        zeroScoreMsg.classList.add('hidden');
+        generateCertificateCanvas();
+      }
+    }
+
+
+    function generateCertificateCanvas() {
+      const canvas = document.getElementById('certCanvas');
+      canvas.width = 800;
+      canvas.height = 560;
+      const ctx = canvas.getContext('2d');
+
+
+      // Background Gradient
+      const grad = ctx.createLinearGradient(0, 0, 800, 560);
+      grad.addColorStop(0, '#f8fafc');
+      grad.addColorStop(1, '#e0f2fe');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 800, 560);
+
+
+      // Outer Gold Border
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(20, 20, 760, 520);
+
+
+      // Inner Navy Border
+      ctx.strokeStyle = '#1e3a8a';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(32, 32, 736, 496);
+
+
+      // School Name
+      ctx.fillStyle = '#1e3a8a';
+      ctx.font = 'bold 30px "Noto Sans TC", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('保良局田家炳小學', 400, 85);
+
+
+      // Title
+      ctx.fillStyle = '#b45309';
+      ctx.font = 'black 36px "Noto Sans TC", sans-serif';
+      ctx.fillText('🏆 數學時間大冒險 嘉許狀 🏆', 400, 145);
+
+
+      // Awardee Line
+      ctx.fillStyle = '#334155';
+      ctx.font = '24px "Noto Sans TC", sans-serif';
+      ctx.fillText('頒發給：', 280, 220);
+
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 30px "Noto Sans TC", sans-serif';
+      ctx.fillText(studentName, 430, 220);
+      ctx.beginPath();
+      ctx.moveTo(350, 230);
+      ctx.lineTo(520, 230);
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+
+      // Score sentence
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '22px "Noto Sans TC", sans-serif';
+      const points = scoreCount * 20;
+      ctx.fillText(`在時間的任務中，你展現了勇氣，成功得到 [ ${points} ] 分！`, 400, 300);
+
+
+      // Praise Feedback text depending on score count
+      let feedbackMsg = "";
+      if (scoreCount >= 1 && scoreCount <= 2) {
+        feedbackMsg = "繼續加油！";
+        ctx.fillStyle = '#3b82f6';
+      } else if (scoreCount >= 3 && scoreCount <= 4) {
+        feedbackMsg = "表現出色！";
+        ctx.fillStyle = '#10b981';
+      } else if (scoreCount === 5) {
+        feedbackMsg = "恭喜你，表現優異！";
+        ctx.fillStyle = '#f59e0b';
+      }
+
+
+      ctx.font = 'bold 28px "Noto Sans TC", sans-serif';
+      ctx.fillText(feedbackMsg, 400, 345);
+
+
+      // Medal Icon
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(400, 400, 30, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px "Noto Sans TC", sans-serif';
+      ctx.fillText('優秀', 400, 407);
+
+
+      // Date stamp
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日`;
+      ctx.fillStyle = '#64748b';
+      ctx.font = '18px "Noto Sans TC", sans-serif';
+      ctx.fillText(`📅 日期：${dateStr}`, 400, 470);
+
+
+      // School Stamp Signature
+      ctx.fillStyle = '#1e3a8a';
+      ctx.font = 'bold 16px "Noto Sans TC", sans-serif';
+      ctx.fillText('保良局田家炳小學 數學科組', 610, 490);
+    }
+
+
+    function downloadCertificate() {
+      const canvas = document.getElementById('certCanvas');
+      const imageURL = canvas.toDataURL('image/jpeg', 0.95);
+      const link = document.createElement('a');
+      link.href = imageURL;
+      link.download = `保良局田家炳小學_時間小能手證書_${studentName}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+
+    function restartGame() {
+      document.getElementById('resultScreen').classList.add('hidden');
+      startGame();
+    }
+
+
+    function returnToMenu() {
+      clearInterval(timerInterval);
+      document.getElementById('gameplayScreen').classList.add('hidden');
+      document.getElementById('freeClockScreen').classList.add('hidden');
+      document.getElementById('resultScreen').classList.add('hidden');
+      document.getElementById('headerStats').classList.add('hidden');
+      document.getElementById('setupScreen').classList.remove('hidden');
+    }
+
+
+    function quitGame() {
+      returnToMenu();
+    }
+
+
+    /* Window Load Handler */
+    window.onload = function() {
+      selectDisplayMode('analog');
+      selectTargetMode('end');
+    };
+  </script>
+</body>
+</html>
